@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 from collections import defaultdict
 import supervisely as sly
 
+# https://zenodo.org/record/6324489#.ZGJAM3bMIuV?
+
 load_dotenv("local.env")
 load_dotenv(os.path.expanduser("~/supervisely.env"))
 

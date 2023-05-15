@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from collections import defaultdict
 import supervisely as sly
 
+# https://vision.eng.au.dk/open-plant-phenotyping-database/
+
 load_dotenv("local.env")
 load_dotenv(os.path.expanduser("~/supervisely.env"))
 
