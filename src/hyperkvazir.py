@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from collections import defaultdict
 import supervisely as sly
 import cv2
+import json
 
 # https://osf.io/mh9sj/
 
@@ -18,57 +19,67 @@ if workspace is None:
 else:
     print(f"Workspace name = {workspace.name}, id = {workspace.id}")
 
-dataset = r"C:\Users\German\Documents\hyper-kvasir-segmented-images\images"
+dataset_path = r"C:\Users\German\Documents\hyper-kvasir-segmented-images\images"
 
 
-def load_image_labels(image_path, labels_path):
-    image_info = api.image.upload_path(
-        dataset.id, os.path.basename(image_path), image_path
-    )
-    mask = cv2.imread(labels_path, cv2.IMREAD_GRAYSCALE)
-    labels = []
+def load_image_labels(labels_path):
+    mask = cv2.imread(labels_path[0], cv2.IMREAD_GRAYSCALE)
+    # cv2.imshow("", mask)
     height = image_info.height
     width = image_info.width
     bitmap_annotation = sly.Bitmap(
-        mask,
+        data=mask,
     )
-    obj_class = meta.get_obj_class("Arabidopsis Thaliana")
+    obj_class = meta.get_obj_class(class_name)
     label = sly.Label(bitmap_annotation, obj_class)
-    labels.append(label)
 
-    ann = sly.Annotation(img_size=[height, width], labels=labels)
+    ann = sly.Annotation(img_size=[height, width], labels=[label])
     api.annotation.upload_ann(image_info.id, ann)
-    print(f"Image (id:{image_info.id} has been successfully processed and uploaded.)")
 
 
 # create project and initialize meta
-project_name = os.path.basename(os.path.dirname(os.path.dirname(dataset)))
+project_name = os.path.basename(os.path.dirname(dataset_path))
 project = api.project.get_info_by_name(workspace.id, project_name)
 if project is not None:
     api.project.remove(project.id)
 project = api.project.create(workspace.id, project_name)
 meta = sly.ProjectMeta()
 
-# create object class
-obj_class = sly.ObjClass(xxx, sly.Bitmap)
-meta = meta.add_obj_class(obj_class)
-api.project.update_meta(project.id, meta)
+bboxes_json = json.load(
+    open(r"C:\Users\German\Documents\hyper-kvasir-segmented-images\bounding-boxes.json")
+)
 
-for single_dataset in datasets:
-    mask_path = sly.fs.list_files(
-        os.path.join(single_dataset + "\\gt"), valid_extensions=[".png"]
+dataset = api.dataset.create(project.id, os.path.basename(dataset_path))
+
+for bboxes in bboxes_json:
+    image_path = os.path.join(dataset_path, (bboxes + ".jpg"))
+    image_info = api.image.upload_path(dataset.id, bboxes + ".jpg", image_path)
+
+    xmin = bboxes_json[bboxes]["bbox"][0]["xmin"]
+    ymin = bboxes_json[bboxes]["bbox"][0]["ymin"]
+    xmax = bboxes_json[bboxes]["bbox"][0]["xmax"]
+    ymax = bboxes_json[bboxes]["bbox"][0]["ymax"]
+
+    bbox = sly.Rectangle(top=ymin, left=xmin, bottom=ymax, right=xmax)
+    class_name = bboxes_json[bboxes]["bbox"][0]["label"]
+    obj_class = meta.get_obj_class(class_name)
+    if obj_class is None:
+        obj_class = sly.ObjClass(class_name, sly.Rectangle)
+        meta = meta.add_obj_class(obj_class)
+        api.project.update_meta(project.id, meta)
+    label = sly.Label(bbox, obj_class)
+
+    ann = sly.Annotation(img_size=[image_info.height, image_info.width], labels=[label])
+    api.annotation.upload_ann(image_info.id, ann)
+    print(f"uploaded bbox to image(id:{image_info.id})")
+
+    mask_path = (
+        os.path.join(os.path.dirname(dataset_path), "masks", (bboxes + ".jpg")),
     )
-    dataset = api.dataset.create(
-        project.id, os.path.basename(os.path.dirname(single_dataset))
-    )
-    # upload bboxes to images
-    for path in mask_path:
-        image_path = os.path.join(
-            single_dataset, (os.path.basename(path)[:-7] + ".png")
-        )
-        try:
-            load_image_labels(image_path, path)
-        except Exception as e:
-            print(e)
-            continue
-    print(f"Dataset {dataset.id} has been successfully created.")
+    try:
+        load_image_labels(mask_path)
+    except Exception as e:
+        print(e)
+        break
+    print(f"uploaded mask to image(id:{image_info.id})")
+print(f"Dataset {dataset.id} has been successfully created.")
