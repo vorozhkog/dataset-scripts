@@ -72,9 +72,7 @@ for single_dataset in datasets:
         if len(path_parts) <= 5:
             dictionary[path] = path[:-4] + "_mask.png"
 
-    dataset = api.dataset.create(
-        project.id, os.path.basename(os.path.dirname(single_dataset))
-    )
+    dataset = api.dataset.create(project.id, os.path.basename(single_dataset))
     # upload masks to images
     for k, v in dictionary.items():
         try:
@@ -83,5 +81,3 @@ for single_dataset in datasets:
             print(e)
             continue
     print(f"Dataset {dataset.id} has been successfully created.")
-
-    exit(0)
