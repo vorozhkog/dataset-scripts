@@ -25,15 +25,22 @@ dataset_path = r"C:\Users\German\Documents\hyper-kvasir-segmented-images\images"
 def load_image_labels(labels_path):
     mask = cv2.imread(labels_path[0], cv2.IMREAD_GRAYSCALE)
     # cv2.imshow("", mask)
+    im_bw = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)[1]
+    # mask = cv2.bitwise_not(im_bw)
     height = image_info.height
     width = image_info.width
     bitmap_annotation = sly.Bitmap(
-        data=mask,
+        data=im_bw,
     )
-    obj_class = meta.get_obj_class(class_name)
+    obj_class = meta.get_obj_class(class_name + "_bitmap")
+    # if obj_class is None:
+    #     obj_class = sly.ObjClass(class_name + "_bitmap", sly.Bitmap)
+    #     meta = meta.add_obj_class(obj_class)
+    #     api.project.update_meta(project.id, meta)
     label = sly.Label(bitmap_annotation, obj_class)
+    labels.append(label)
 
-    ann = sly.Annotation(img_size=[height, width], labels=[label])
+    ann = sly.Annotation(img_size=[height, width], labels=labels)
     api.annotation.upload_ann(image_info.id, ann)
 
 
@@ -60,17 +67,20 @@ for bboxes in bboxes_json:
     xmax = bboxes_json[bboxes]["bbox"][0]["xmax"]
     ymax = bboxes_json[bboxes]["bbox"][0]["ymax"]
 
+    labels = []
+
     bbox = sly.Rectangle(top=ymin, left=xmin, bottom=ymax, right=xmax)
     class_name = bboxes_json[bboxes]["bbox"][0]["label"]
     obj_class = meta.get_obj_class(class_name)
     if obj_class is None:
         obj_class = sly.ObjClass(class_name, sly.Rectangle)
+        obj_class_bm = sly.ObjClass(class_name + "_bitmap", sly.Bitmap)
         meta = meta.add_obj_class(obj_class)
+        meta = meta.add_obj_class(obj_class_bm)
         api.project.update_meta(project.id, meta)
     label = sly.Label(bbox, obj_class)
+    labels.append(label)
 
-    ann = sly.Annotation(img_size=[image_info.height, image_info.width], labels=[label])
-    api.annotation.upload_ann(image_info.id, ann)
     print(f"uploaded bbox to image(id:{image_info.id})")
 
     mask_path = (
@@ -81,5 +91,6 @@ for bboxes in bboxes_json:
     except Exception as e:
         print(e)
         break
+
     print(f"uploaded mask to image(id:{image_info.id})")
 print(f"Dataset {dataset.id} has been successfully created.")
