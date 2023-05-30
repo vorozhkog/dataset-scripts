@@ -65,7 +65,6 @@ for project_path in projects:
     api.project.update_meta(project.id, meta)
 
     datasets = [f.path for f in os.scandir(project_path) if f.is_dir()]
-    mask_folder = os.path
 
     for single_dataset in datasets:
         mask_folder_path = os.path.join(
