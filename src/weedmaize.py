@@ -24,34 +24,6 @@ datasets = [
 ]
 
 
-# def load_image_labels(image_path, labels_path):
-#     image_info = api.image.upload_path(
-#         dataset.id, os.path.basename(image_path), image_path
-#     )
-#     mask = cv2.imread(labels_path, cv2.IMREAD_GRAYSCALE)
-#     # cv2.imwrite(image_info.name, mask)
-#     thresh = 127
-#     im_bw = cv2.threshold(mask, thresh, 255, cv2.THRESH_BINARY)[1]
-#     # mask = cv2.bitwise_not(im_bw)
-#     labels = []
-#     height = image_info.height
-#     width = image_info.width
-#     bitmap_annotation = sly.Bitmap(
-#         im_bw,
-#     )
-#     obj_class = meta.get_obj_class(os.path.basename(project_path))
-#     if obj_class is None:
-#         obj_class = sly.ObjClass(os.path.basename(project_path), sly.Bitmap)
-#         meta = meta.add_obj_class(obj_class)
-#         api.project.update_meta(project.id, meta)
-#     label = sly.Label(bitmap_annotation, obj_class)
-#     labels.append(label)
-
-#     ann = sly.Annotation(img_size=[height, width], labels=labels)
-#     api.annotation.upload_ann(image_info.id, ann)
-#     print(f"Image (id:{image_info.id}) has been successfully processed and uploaded.")
-
-
 # create project and initialize meta
 project_name = "WeedMaize"
 project = api.project.get_info_by_name(workspace.id, project_name)
@@ -144,24 +116,4 @@ for single_dataset in datasets:
             )
             api.annotation.upload_ann(image_info.id, ann)
             print(f"uploaded bbox to image(id:{image_info.id})")
-    print(f"Dataset {dataset.id} has been successfully created.")
-
-exit(0)
-
-for single_dataset in datasets:
-    mask_path = sly.fs.list_files(
-        single_dataset,
-        valid_extensions=[
-            ".xml",
-        ],
-    )
-    dataset = api.dataset.create(project.id, os.path.basename(single_dataset))
-    # upload masks to images
-    for path in mask_path:
-        img_path = mask_path[:-4] + ".jpg"
-        try:
-            load_image_labels(img_path, path)
-        except Exception as e:
-            print(f"EXCEPTION: {e}")
-            continue
     print(f"Dataset {dataset.id} has been successfully created.")
