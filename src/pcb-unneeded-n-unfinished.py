@@ -29,7 +29,7 @@ def conv(x, y, w, h):
     return x1, y1, x2, y2
 
 
-def load_image_labels(image_path, dict_value):
+def load_image_labels(image_path, dict_value, tags=list):
     image_info = api.image.upload_path(
         dataset.id, os.path.basename(image_path), image_path
     )
@@ -49,7 +49,7 @@ def load_image_labels(image_path, dict_value):
     label = sly.Label(bbox_annotation, obj_class)
     labels.append(label)
 
-    ann = sly.Annotation(img_size=[height, width], labels=labels)
+    ann = sly.Annotation(img_size=[height, width], labels=labels, img_tags=tags)
     api.annotation.upload_ann(image_info.id, ann)
     print(f"Image (id:{image_info.id} has been successfully processed and uploaded.)")
 
@@ -110,6 +110,18 @@ for dataset_path in datasets:
         img_name = sly.fs.get_file_name_with_ext(path)
         dict_bboxes.get(img_name)
         dict_value = dict_bboxes.get(img_name)
+
+        tag_value_type = sly.TagValueType.ANY_STRING
+        tag_names = "Angle"
+        tag_meta = meta.get_tag_meta(tag_name)
+        if tag_meta is None:
+            tag_meta = sly.TagMeta(tag_name, tag_value_type)
+            meta = meta.add_tag_meta(tag_meta)
+            api.project.update_meta(dataset.project_id, meta)
+
+        # add tag to image
+        tag = sly.Tag(tag_meta, row[2])
+
         try:
             load_image_labels(path, dict_value)
         except Exception as e:
